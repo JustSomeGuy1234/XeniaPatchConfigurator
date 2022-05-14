@@ -1,0 +1,158 @@
+﻿<Window x:Class="XeniaPatchUI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:XeniaPatchUI"
+        mc:Ignorable="d" 
+        FontSize="18" FontFamily="Yu Gothic UI"
+        AllowDrop="True" Drop="Window_Drop"
+        Height="450" Width="1200" MinHeight="350" MinWidth="700"
+        Title="Xenia Patch Configurator">
+    
+    <Window.Resources>
+        <local:PatchFolder x:Key="patchFolder"/>
+
+        
+        <!--Style that sets the background colour of the Control to red if PortablePath not found (requires control datacontext set to patchFolder)-->
+        <Style TargetType="{x:Type Control}" x:Key="CommonFoundPathColour">
+            <Style.Triggers>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding FoundPatchFolder}" Value="false"/>
+                        <Condition Binding="{Binding IsPortable}" Value="true"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Background" Value="#A03030"/>
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding FoundPatchFolder}" Value="true"/>
+                        <Condition Binding="{Binding IsPortable}" Value="true"/>
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Background" Value="Gray"/>
+                </MultiDataTrigger>
+                <DataTrigger Binding="{Binding IsPortable}" Value="false">
+                    <Setter Property="Background" Value="Gray"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style TargetType="{x:Type Button}" x:Key="ButtonFoundPathColour" BasedOn="{StaticResource CommonFoundPathColour}"/>
+        <Style TargetType="{x:Type TextBox}" x:Key="TextboxFoundPathColour" BasedOn="{StaticResource CommonFoundPathColour}"/>
+    </Window.Resources>
+    
+    <Grid Background="#FF505050" >
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="20" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="20" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="10" />
+            <RowDefinition Height="auto" />
+            <RowDefinition Height="auto" />
+            <RowDefinition Height="auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="20" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="1" Grid.Column="1" HorizontalAlignment="Center" Grid.ColumnSpan="4" FontWeight="Bold"
+                   Text="Xenia Patch Configurator by Just Some Guy"
+                   Margin="0,0,0,5"/>
+
+        <!--Create a new grid for the top config half-->
+        <Grid Grid.Row="2" Grid.Column="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="auto" />
+                <ColumnDefinition Width="auto" />
+                <ColumnDefinition Width="auto" />
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="auto"/>
+                <RowDefinition Height="auto"/>
+            </Grid.RowDefinitions>
+
+            <!--Portable option txt & Checkbox-->
+            <TextBlock Text="Portable" Grid.Row="0" Grid.Column="0"/>
+            <CheckBox x:Name="portableCheckbox" Grid.Row="0" Grid.Column="1" 
+                HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5,0,15,0"
+                IsChecked="{Binding Source={StaticResource patchFolder}, Path=IsPortable, UpdateSourceTrigger=PropertyChanged}" 
+                Checked = "ClearPatchFilesList" Unchecked="UpdatePatchFiles">
+                <CheckBox.LayoutTransform>
+                    <ScaleTransform ScaleX="1.3" ScaleY="1.3"/>
+                </CheckBox.LayoutTransform>
+            </CheckBox>
+
+            <!-- Portable path textblock & Textbox, Update Path button, and folder select button-->
+            <TextBlock Grid.Row="0" Grid.Column="2" Margin="0,-2,0,0"
+                   Text="Portable Patch Path:"/>
+            <TextBox x:Name="portablePathTextBox" Grid.Row="0" Grid.Column="4" Margin="2,0,0,0" MinWidth="350"
+                 DataContext="{StaticResource patchFolder}" Style="{StaticResource TextboxFoundPathColour}"
+                 IsEnabled="{Binding ElementName=portableCheckbox, Path=IsChecked}" KeyDown="portablePathTextBox_KeyDown"
+                 FontFamily="Calibri" Text="{Binding Path=PortableFolder, UpdateSourceTrigger=PropertyChanged}"/>
+            <Button x:Name="pathUpdateButton" IsEnabled="{Binding ElementName=portableCheckbox, Path=IsChecked}" Click="UpdatePatchFiles" Style="{StaticResource ButtonFoundPathColour}" DataContext="{StaticResource patchFolder}"
+                    Grid.Column="2" Grid.Row="1" Width="100" Margin="0,1,0,0" Content="Update Path" FontSize="15"/>
+            <Button x:Name="selectPatchFolderButton" Grid.Column="3" Grid.Row="0" Height="24" Width="24" Margin="10,0,0,0" Click="selectPatchFolderButton_Click" IsEnabled="{Binding ElementName=portableCheckbox, Path=IsChecked}" Style="{StaticResource ButtonFoundPathColour}"
+                    DataContext="{StaticResource patchFolder}">
+                <Image Source="/images/foldericon.png"/>
+            </Button>
+
+            <!--Patches Enabled & Checkbox-->
+            <TextBlock Text="Patches Enabled" Grid.Row="3" Grid.Column="0"/>
+            <CheckBox x:Name="patchesEnabledCheckbox" Grid.Row="3" Grid.Column="1" DataContext="{StaticResource patchFolder}"
+                      IsChecked="{Binding Path=PatchesEnabled}" IsEnabled="{Binding Path=FoundPatchFolder}"
+                      HorizontalAlignment="Center" VerticalAlignment="Center" Margin="5,0,15,0">
+                <CheckBox.LayoutTransform>
+                    <ScaleTransform ScaleX="1.3" ScaleY="1.3"/>
+                </CheckBox.LayoutTransform>
+            </CheckBox>
+        </Grid>
+
+
+        <GridSplitter Grid.Row="3" Grid.Column="0" Height="6" HorizontalAlignment="Stretch" VerticalAlignment="Bottom" IsEnabled="False"
+                      Margin="0,10,0,15" Grid.ColumnSpan="6" Background="#FF6F6F6F"/>
+
+        <!--Grid for bottom patch modification half-->
+        <Grid Grid.Column="1" Grid.Row="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="20"/>
+                <ColumnDefinition Width="auto"/>
+                <ColumnDefinition Width="20"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            
+            <!--Patch File Select (Column 0)-->
+            <ListBox Grid.Row="0" Grid.Column="0" x:Name="patchfileListBox" Background="#FF303841"
+                VirtualizingPanel.IsVirtualizing="False" MinWidth="100"
+                ItemsSource="{Binding}" DisplayMemberPath="GameName"
+                SelectionChanged="patchfileListBox_SelectionChanged">
+            </ListBox>
+
+            <!--Game Patch Options (Column 2)-->
+            <ListView x:Name="patchOptionsItemsControl" Grid.Row="0" Grid.Column="2" ScrollViewer.VerticalScrollBarVisibility="Auto" VirtualizingPanel.IsVirtualizing="False" MinWidth="100" BorderBrush="Black" Background="#FF303841" BorderThickness="3" 
+                      ItemsSource="{Binding Path=Patches}">
+                <ListView.ItemTemplate>
+                    <DataTemplate DataType="{x:Type local:Patch}">
+                        <StackPanel Orientation="Horizontal">
+                            <CheckBox VerticalAlignment="Bottom" IsChecked="{Binding Path=IsEnabled}">
+                                <CheckBox.LayoutTransform>
+                                    <ScaleTransform ScaleX="1.3" ScaleY="1.3"/>
+                                </CheckBox.LayoutTransform>
+                            </CheckBox>
+                            <TextBlock Text="{Binding Path=PatchName}" Margin="4,0,0,0"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+            
+            <!--Patch Description (Column 5)-->
+            <Border Grid.Column="5" Grid.Row="0" BorderBrush="Black" BorderThickness="2" >
+                <TextBox x:Name="descriptionTextbox" IsReadOnly="True" TextWrapping="Wrap" Background="#FF606060" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         Text="{Binding ElementName=patchOptionsItemsControl, Path=SelectedItem.PatchDescription, Mode=OneWay, FallbackValue=Patch Description}"/>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
