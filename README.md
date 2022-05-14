@@ -1,2 +1,11 @@
 # XeniaPatchConfigurator
- A GUI for enabling and disabling Xenia Canary patches
+ A GUI for enabling and disabling Xenia Canary patches  
+ ![](/Example.png?raw=true)  
+ 
+## How to use:
+You must use Xenia Canary, as normal Xenia does not support patches. You must install the **patches** folder yourself as detailed in [this guide](https://github.com/xenia-canary/game-patches#installing).  
+If you are not using a portable version of Xenia Canary, keep 'Portable' unticked. If you are, tick it and navigate to the **patches** folder within the Xenia folder.  
+If you pasted the portable path in, press either the enter key or the Update Path button and the patch list should fill with each game's patch file.
+
+## Requirements:
+.Net Core 3.1
