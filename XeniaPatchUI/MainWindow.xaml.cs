@@ -121,7 +121,7 @@ namespace XeniaPatchUI
         const string applyPatchesString = "apply_patches = ";
 
         public static ObservableCollection<PatchFile> patchFiles = new ObservableCollection<PatchFile>();
-        const string NonPortableFolder = @"%homepath%\Documents\Xenia\patches\";
+        const string NonPortableFolder = @"C:\%homepath%\Documents\Xenia\patches\";
         const string RelativeXeniaConfigPath = @"\..\xenia-canary.config.toml";
 
         bool patchesEnabled;
