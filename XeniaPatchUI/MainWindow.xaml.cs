@@ -21,6 +21,7 @@ namespace XeniaPatchUI
 {
     // MVVM is for those that know what they're doing, not me c:
 
+
     public partial class MainWindow : Window
     {
         public MainWindow()
@@ -34,8 +35,11 @@ namespace XeniaPatchUI
             LoadAppConfig();
             patchfileListBox.DataContext = PatchFolder.patchFiles;
             //portableCheckbox.DataContext = PatchFolder.patchFolder.IsPortable; // wot
-            
+
+            patchfileListBox.Items.SortDescriptions.Add(new SortDescription("Favourite", ListSortDirection.Descending));
             patchfileListBox.Items.SortDescriptions.Add(new SortDescription("GameName", ListSortDirection.Ascending));
+            patchfileListBox.Items.IsLiveSorting = true;
+
         }
 
         // Config is split between MainWindow and PatchFolder. See PatchFolder.UpdateAppConfig
@@ -66,6 +70,10 @@ namespace XeniaPatchUI
                     else if (line.Contains("PortablePath"))
                     {
                         portablepath = PatchFile.GetStringBetweenFirstQuotePair(line);
+                    }
+                    else if (line.Contains("Favourite"))
+                    {
+                        PatchFolder.Favourites.Add(PatchFile.GetStringBetweenFirstQuotePair(line));
                     }
                 }
             }
@@ -145,6 +153,26 @@ namespace XeniaPatchUI
             if (PatchFile.currentPatchFile != null && PatchFile.currentPatchFile.Patches != null)
                 PatchFile.currentPatchFile.Patches.Clear();
         }
+
+        private void patchfileListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            // So uh this got a lil more complicated than I expected
+            // Double clicking anywhere in the listbox counts as a double click, including on the scrollbar.
+            // I don't want people accidentally favouriting games while scrolling so... do some collision detection real quick.
+            ListBox theListbox = (ListBox)sender;
+            Window mainWindow = MainWindow.GetWindow(theListbox);
+            PatchFile patchFile = (PatchFile)theListbox.SelectedItem;
+            double listboxHeight = theListbox.ActualHeight;
+            Point listboxPoint = theListbox.TranslatePoint(new Point(0, 0), mainWindow);
+            Rect listboxBounds = new Rect(listboxPoint.X, listboxPoint.Y, theListbox.ActualWidth - SystemParameters.VerticalScrollBarWidth, listboxHeight);
+
+            Point clickPoint = e.GetPosition(mainWindow);
+
+            if (patchFile != null && listboxBounds.Contains(clickPoint))
+            {
+                patchFile.Favourite = !patchFile.Favourite;
+            }
+        }
     }
 
     public class PatchFolder : INotifyPropertyChanged
@@ -154,6 +182,7 @@ namespace XeniaPatchUI
         const string applyPatchesString = "apply_patches = ";
 
         public static ObservableCollection<PatchFile> patchFiles = new ObservableCollection<PatchFile>();
+        public static ObservableCollection<string> Favourites = new ObservableCollection<string>();
         const string NonPortableFolder = @"C:\%homepath%\Documents\Xenia\patches\";
         const string RelativeXeniaConfigPath = @"\..\xenia-canary.config.toml";
         public static string ConfigPath = AppContext.BaseDirectory + @"\config.cfg";
@@ -216,7 +245,9 @@ namespace XeniaPatchUI
             patchFiles.Clear();
             foreach (string filepath in Directory.GetFiles(patchfolderpath, "*.toml"))
             {
-                patchFiles.Add(new PatchFile(filepath));
+                PatchFile thisPatchFile = new PatchFile(filepath);
+                thisPatchFile.Favourite = PatchFolder.Favourites.Contains(thisPatchFile.GameName);
+                patchFiles.Add(thisPatchFile);
             }
             FoundPatchFolder = true;
             return;
@@ -301,10 +332,14 @@ namespace XeniaPatchUI
         public static void UpdateAppConfig()
         {
             // In the future we should take a less rudimentary approach if we have different things in different classes to save.
-            File.WriteAllText(PatchFolder.ConfigPath,
-                    $"IsPortable = \"{PatchFolder.patchFolder.IsPortable}\"\n" +
-                    $"PortablePath = \"{PatchFolder.patchFolder.PortableFolder}\"\n"
-                );
+            string save =
+                $"IsPortable = \"{PatchFolder.patchFolder.IsPortable}\"\n" +
+                $"PortablePath = \"{PatchFolder.patchFolder.PortableFolder}\"\n";
+            foreach (string thisGame in PatchFolder.Favourites)
+            {
+                save += $"Favourite = \"{thisGame}\"\n";
+            }
+            File.WriteAllText(PatchFolder.ConfigPath, save);
         }
 
         protected void OnPropertyChanged([CallerMemberName] string name = null)
@@ -318,12 +353,31 @@ namespace XeniaPatchUI
         }
     }
 
-    public class PatchFile
+    public class PatchFile : INotifyPropertyChanged
     {
+        public event PropertyChangedEventHandler PropertyChanged;
         public static PatchFile currentPatchFile;
         public ObservableCollection<Patch> Patches { get; set; }
         public string filepath;
         public string GameName { get; }
+        bool favourite;
+        public bool Favourite { 
+            get { return favourite; }
+            set
+            {
+                favourite = value;
+                if (value && !PatchFolder.Favourites.Contains(GameName))
+                    PatchFolder.Favourites.Add(GameName);
+                else if(!value)
+                {
+                    while (PatchFolder.Favourites.Remove(GameName))
+                    { }
+                }
+                PatchFolder.UpdateAppConfig();
+                OnPropertyChanged();
+            }
+        }
+
         public const char commentChar = '#';
         public PatchFile(string path)
         {
@@ -405,6 +459,10 @@ namespace XeniaPatchUI
                 }
             }
             return null;
+        }
+        protected void OnPropertyChanged([CallerMemberName] string name = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
         }
     }
 

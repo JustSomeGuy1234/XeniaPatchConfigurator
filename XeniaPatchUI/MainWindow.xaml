@@ -38,6 +38,9 @@
         </Style>
         <Style TargetType="{x:Type Button}" x:Key="ButtonFoundPathColour" BasedOn="{StaticResource CommonFoundPathColour}"/>
         <Style TargetType="{x:Type TextBox}" x:Key="TextboxFoundPathColour" BasedOn="{StaticResource CommonFoundPathColour}"/>
+        
+        <!--Style that sets the colour of a Favourite'd game-->
+
     </Window.Resources>
     
     <Grid Background="#FF505050" >
@@ -125,14 +128,23 @@
             
             
             <!--Patch File Select (Column 0)-->
-            <ListBox Grid.Row="0" Grid.Column="0" x:Name="patchfileListBox" Background="#FF303841"
+            <ListBox x:Name="patchfileListBox" Grid.Row="0" Grid.Column="0" Background="#FF354c50"
                 VirtualizingPanel.IsVirtualizing="False" MinWidth="100"
-                ItemsSource="{Binding}" DisplayMemberPath="GameName"
-                SelectionChanged="patchfileListBox_SelectionChanged">
+                ItemsSource="{Binding}" MouseDoubleClick="patchfileListBox_MouseDoubleClick"
+                SelectionChanged="patchfileListBox_SelectionChanged" DisplayMemberPath="GameName">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="{x:Type ListBoxItem}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Path=Favourite}" Value="true">
+                                <Setter Property="Foreground" Value="LawnGreen"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ListBox.ItemContainerStyle>
             </ListBox>
 
             <!--Game Patch Options (Column 2)-->
-            <ListView x:Name="patchOptionsItemsControl" Grid.Row="0" Grid.Column="2" ScrollViewer.VerticalScrollBarVisibility="Auto" VirtualizingPanel.IsVirtualizing="False" MinWidth="100" BorderBrush="Black" Background="#FF303841" BorderThickness="3" 
+            <ListView x:Name="patchOptionsItemsControl" Grid.Row="0" Grid.Column="2" ScrollViewer.VerticalScrollBarVisibility="Auto" VirtualizingPanel.IsVirtualizing="False" MinWidth="100" BorderBrush="Black" Background="#FF354c50" BorderThickness="3" 
                       ItemsSource="{Binding Path=Patches}">
                 <ListView.ItemTemplate>
                     <DataTemplate DataType="{x:Type local:Patch}">
