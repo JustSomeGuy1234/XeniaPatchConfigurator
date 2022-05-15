@@ -31,16 +31,48 @@ namespace XeniaPatchUI
             {
                 throw new ArgumentException("Patch folder instance not found!");
             }
-            UpdatePatchFiles();
-            PatchFolder.patchFolder.PortableFolder = @"C:\path\to\portableXeniaCanary\patches\"; // TODO: Create a config file to save portable path, and add game favouriting
-
+            LoadAppConfig();
             patchfileListBox.DataContext = PatchFolder.patchFiles;
-            portableCheckbox.DataContext = PatchFolder.patchFolder.IsPortable;
+            //portableCheckbox.DataContext = PatchFolder.patchFolder.IsPortable; // wot
             
             patchfileListBox.Items.SortDescriptions.Add(new SortDescription("GameName", ListSortDirection.Ascending));
         }
 
-        
+        // Config is split between MainWindow and PatchFolder. See PatchFolder.UpdateAppConfig
+        // Calling this function calls UpdatePatchFiles which ends up calling UpdateAppConfig, so basically on startup we load settings then save them again which we probably shouldn't do but meh.
+        void LoadAppConfig()
+        {
+            string isportable = "False";
+            string portablepath = @"C:\path\to\portableXeniaCanary\patches\";
+
+            bool isPortableBool = false;
+
+            if (!File.Exists(PatchFolder.ConfigPath))
+            {
+                File.WriteAllText(PatchFolder.ConfigPath, 
+                    $"IsPortable = \"{isportable}\"\n" +
+                    $"PortablePath = \"{portablepath}\"\n"
+                );
+            }
+            else
+            {
+                string[] configLines = File.ReadAllLines(PatchFolder.ConfigPath);
+                foreach (string line in configLines)
+                {
+                    if (line.Contains("IsPortable"))
+                    {
+                        isPortableBool = PatchFile.GetStringBetweenFirstQuotePair(line) == "True";
+                    }
+                    else if (line.Contains("PortablePath"))
+                    {
+                        portablepath = PatchFile.GetStringBetweenFirstQuotePair(line);
+                    }
+                }
+            }
+            PatchFolder.patchFolder.IsPortable = isPortableBool;
+            PatchFolder.patchFolder.PortableFolder = portablepath;
+            UpdatePatchFiles();
+        }
 
         private void Window_Drop(object sender, DragEventArgs e)
         {
@@ -102,7 +134,8 @@ namespace XeniaPatchUI
         public void UpdatePatchFiles(object sender = null, RoutedEventArgs e = null)
         {
             PatchFolder.patchFolder.PopulatePatchFolder();
-            PatchFolder.patchFolder.PatchesEnabled = PatchFolder.patchFolder.GetIfPatchesEnabledInConfig();
+            PatchFolder.patchFolder.PatchesEnabled = PatchFolder.patchFolder.GetIfPatchesEnabledInXeniaConfig();
+            PatchFolder.UpdateAppConfig();
 
         }
 
@@ -123,6 +156,7 @@ namespace XeniaPatchUI
         public static ObservableCollection<PatchFile> patchFiles = new ObservableCollection<PatchFile>();
         const string NonPortableFolder = @"C:\%homepath%\Documents\Xenia\patches\";
         const string RelativeXeniaConfigPath = @"\..\xenia-canary.config.toml";
+        public static string ConfigPath = AppContext.BaseDirectory + @"\config.cfg";
 
         bool patchesEnabled;
         public bool PatchesEnabled { 
@@ -166,6 +200,7 @@ namespace XeniaPatchUI
             set 
             {
                 isPortable = value;
+                UpdateAppConfig();
                 OnPropertyChanged();
             } 
         }
@@ -244,7 +279,7 @@ namespace XeniaPatchUI
         }
 
         // Called when updating the patch folder
-        public bool GetIfPatchesEnabledInConfig()
+        public bool GetIfPatchesEnabledInXeniaConfig()
         {
             string finalConfigPath = System.IO.Path.GetFullPath(Environment.ExpandEnvironmentVariables(IsPortable ? PortableFolder + RelativeXeniaConfigPath : NonPortableFolder + RelativeXeniaConfigPath));
             if (!File.Exists(finalConfigPath))
@@ -260,6 +295,16 @@ namespace XeniaPatchUI
                 }
             }
             return false;
+        }
+
+        // Other part of app config. I know reading and writing the config should really be together but whatever.
+        public static void UpdateAppConfig()
+        {
+            // In the future we should take a less rudimentary approach if we have different things in different classes to save.
+            File.WriteAllText(PatchFolder.ConfigPath,
+                    $"IsPortable = \"{PatchFolder.patchFolder.IsPortable}\"\n" +
+                    $"PortablePath = \"{PatchFolder.patchFolder.PortableFolder}\"\n"
+                );
         }
 
         protected void OnPropertyChanged([CallerMemberName] string name = null)
